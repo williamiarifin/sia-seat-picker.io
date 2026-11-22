@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #050d1a;
+  --color-navy: #0a1b33;
+  --color-navy-deep: #050d1a;
+  --color-gold: #d9b15c;
+  --color-gold-bright: #f2d493;
+  --color-mist: #a9bacb;
+  --color-paper: #f3f7fa;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  --ink: #050d1a;
+  --navy: #0a1b33;
+  --gold: #d9b15c;
+  --gold-bright: #f2d493;
+  --mist: #a9bacb;
+  --paper: #f3f7fa;
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+/* The world behind the UI: a deep navy studio gradient with a warm horizon.
+   Painted on the body itself (not a ::before layer) so the WebGL canvas and
+   the fixed background can never end up underneath an opaque body colour. */
+body {
+  margin: 0;
+  color: var(--paper);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(120% 80% at 50% 118%, rgba(217, 177, 92, 0.16) 0%, rgba(217, 177, 92, 0) 55%),
+    radial-gradient(90% 70% at 18% 8%, rgba(70, 118, 180, 0.22) 0%, rgba(5, 13, 26, 0) 60%),
+    radial-gradient(80% 60% at 88% 0%, rgba(40, 74, 120, 0.18) 0%, rgba(5, 13, 26, 0) 55%),
+    linear-gradient(178deg, #071422 0%, #050d1a 48%, #040a13 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+::selection {
+  background: rgba(217, 177, 92, 0.32);
+  color: #fff;
+}
+
+/* Glass panel ---------------------------------------------------------- */
+.glass {
+  background: rgba(10, 27, 51, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow:
+    0 30px 80px -32px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.glass-soft {
+  background: rgba(10, 27, 51, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.gold-text {
+  background: linear-gradient(120deg, #f7e3b4 0%, #d9b15c 52%, #b98f3c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Thin, quiet scrollbar so the 3D scene stays the star. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(169, 186, 203, 0.28) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(169, 186, 203, 0.24);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(0.4);
+  cursor: pointer;
+}
+
+/* Tabular numerics for times, prices and seat numbers. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
