@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useBooking } from "@/lib/store";
+import { appPath } from "@/lib/paths";
 import { pathToStep } from "./BookingHydrator";
 
 /**
@@ -12,7 +13,7 @@ import { pathToStep } from "./BookingHydrator";
 export function ContentLayer({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const setStep = useBooking((s) => s.setStep);
-  const isSeats = pathname.replace(/\/+$/, "") === "/seats";
+  const isSeats = appPath(pathname) === "/seats";
 
   useEffect(() => {
     setStep(pathToStep(pathname));

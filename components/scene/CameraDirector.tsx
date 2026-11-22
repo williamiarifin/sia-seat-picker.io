@@ -20,6 +20,7 @@ import {
 } from "@/lib/camera";
 import { seatById } from "@/lib/seatmap";
 import { useBooking } from "@/lib/store";
+import { appPath } from "@/lib/paths";
 import type { ScenePhase, Step } from "@/lib/types";
 
 import { sceneState } from "./sceneState";
@@ -38,8 +39,7 @@ const STEP_BY_PATH: Record<string, Step> = {
 };
 
 function stepFromPathname(pathname: string): Step {
-  const clean = pathname.replace(/\/+$/, "") || "/";
-  return STEP_BY_PATH[clean] ?? "search";
+  return STEP_BY_PATH[appPath(pathname)] ?? "search";
 }
 
 const SETTLE_TIME = 0.6;

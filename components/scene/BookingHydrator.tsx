@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useBooking } from "@/lib/store";
+import { appPath } from "@/lib/paths";
 import type { Step } from "@/lib/types";
 
 const PATH_TO_STEP: Record<string, Step> = {
@@ -23,6 +24,5 @@ export function BookingHydrator() {
 }
 
 export function pathToStep(pathname: string): Step {
-  const clean = pathname.replace(/\/+$/, "") || "/";
-  return PATH_TO_STEP[clean] ?? "search";
+  return PATH_TO_STEP[appPath(pathname)] ?? "search";
 }

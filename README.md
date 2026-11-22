@@ -16,9 +16,42 @@ npm run dev
 
 Open http://localhost:3000.
 
+The app is a fully static export (see GitHub Pages below), so there is no
+`next start`. To preview the production build:
+
 ```bash
-npm run build && npm start   # production
+npm run build      # writes ./out
+npx serve out
 ```
+
+## Deploy to GitHub Pages
+
+Pushing to `main` deploys automatically via `.github/workflows/deploy.yml`:
+
+1. `next.config.ts` builds with `output: "export"`, `trailingSlash: true` and a
+   `basePath` read from `NEXT_PUBLIC_BASE_PATH`.
+2. The workflow derives that base path from the repository name, so renaming
+   the repo cannot break the build — a project site is served from
+   `https://<user>.github.io/<repo>/`, and a `<user>.github.io` repo is served
+   from the root.
+3. It writes `out/.nojekyll` so Pages does not drop the `_next` asset folder,
+   then publishes through `actions/deploy-pages`.
+
+`lib/paths.ts` strips the base path from `usePathname()` before comparing
+routes, otherwise the seat map would lose its pointer events under
+`/<repo>/seats/`.
+
+To reproduce a Pages build locally:
+
+```powershell
+$env:NEXT_PUBLIC_BASE_PATH="/your-repo-name"
+npm run build
+npx serve out
+```
+
+GitHub Pages on a **private** repo requires a paid plan; on the free plan the
+repository has to be public. If you would rather keep it private, Vercel or
+Cloudflare Pages work as-is — the export is just static files.
 
 ## The flow
 

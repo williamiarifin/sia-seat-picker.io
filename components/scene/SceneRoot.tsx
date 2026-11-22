@@ -11,6 +11,7 @@ import { Cabin } from "@/components/cabin/Cabin";
 import { CabinLabels } from "@/components/cabin/CabinLabels";
 import { Seats } from "@/components/cabin/Seats";
 import { useBooking } from "@/lib/store";
+import { appPath } from "@/lib/paths";
 import { CameraDirector } from "./CameraDirector";
 import { Effects } from "./Effects";
 import { Lighting } from "./Lighting";
@@ -22,7 +23,7 @@ export function SceneRoot() {
   const pathname = usePathname();
   const phase = useBooking((state) => state.phase);
   const [ready, setReady] = useState(false);
-  const isSeats = pathname.replace(/\/+$/, "") === "/seats";
+  const isSeats = appPath(pathname) === "/seats";
 
   useEffect(() => {
     const mq = window.matchMedia(REDUCE_QUERY);
