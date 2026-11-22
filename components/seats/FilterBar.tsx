@@ -38,7 +38,7 @@ const CHIPS: ReadonlyArray<{
   { key: "window", label: "Window", Icon: WindowIcon },
   { key: "aisle", label: "Aisle", Icon: AisleIcon },
   { key: "exitRow", label: "Exit row", Icon: ExitIcon },
-  { key: "extraLegroom", label: "Extra legroom", Icon: LegroomIcon },
+  { key: "extraLegroom", label: "Legroom", Icon: LegroomIcon },
 ];
 
 const PRICE_MIN = Math.min(...SEATS.map((seat) => seat.price));
@@ -125,7 +125,7 @@ export function FilterBar() {
       <div
         role="group"
         aria-label="Cabin"
-        className="grid grid-cols-4 gap-0.5 rounded-xl border border-white/[0.08] bg-black/20 p-1"
+        className="grid grid-cols-2 gap-0.5 rounded-xl border border-white/[0.08] bg-black/20 p-1"
       >
         {CABIN_OPTIONS.map((option) => {
           const active = filter.cabin === option.value;
@@ -142,7 +142,7 @@ export function FilterBar() {
                 event.stopPropagation();
                 updateFilter({ cabin: option.value });
               }}
-              className={`flex h-8 items-center justify-center gap-1.5 rounded-lg text-[10px] font-medium tracking-wide transition-colors ${FOCUS} ${
+              className={`flex h-8 min-w-0 items-center justify-start gap-2 rounded-lg px-2.5 text-[10.5px] font-medium transition-colors ${FOCUS} ${
                 active
                   ? "text-[#F3F7FA]"
                   : "text-mist hover:bg-white/[0.05] hover:text-white"
@@ -158,10 +158,10 @@ export function FilterBar() {
             >
               <span
                 aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full"
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
                 style={{ backgroundColor: accent }}
               />
-              {option.label}
+              <span className="truncate leading-none">{option.label}</span>
             </button>
           );
         })}
