@@ -5,13 +5,12 @@ import { EmptyState } from "@/components/booking/EmptyState";
 import { OrderSummary } from "@/components/booking/OrderSummary";
 import { LoadingPanel, PageShell } from "@/components/booking/PageShell";
 import { TicketIcon } from "@/components/booking/icons";
-import { flightById } from "@/lib/flights";
 import { useBooking } from "@/lib/store";
 
 export default function ReviewPage() {
   const setStep = useBooking((state) => state.setStep);
   const hydrated = useBooking((state) => state.hydrated);
-  const flight = useBooking((state) => flightById(state.flightId));
+  const flight = useBooking((state) => state.flight);
 
   useEffect(() => {
     setStep("review");

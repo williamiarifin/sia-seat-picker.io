@@ -164,12 +164,18 @@ swallowed.
 
 ```
 /            search        ─ plane sits three-quarter view, glass search panel
-/results     flights       ─ three SQ services, fare families
-/passengers  details       ─ passenger form
+/results     flights       ─ three SQ services for the chosen city pair
+/passengers  details       ─ one name per traveller, one contact email
 /seats       seat map      ─ top-down cutaway → fly-in → in-seat confirm
 /review      payment       ─ order summary + fake card form
-/confirmation done         ─ boarding pass stub
+/confirmation done         ─ one boarding pass per traveller
 ```
+
+Results are generated from the route, not hard-coded: `flightsForRoute()` in
+`lib/flights.ts` estimates the sector from great-circle distance between the
+selected airports and derives duration, departure/arrival, flight numbers and
+price. Pick SIN → KUL and you get a one-hour hop; pick CGK → SGN and the
+schedule moves accordingly.
 
 ## How the "fly inside" works
 

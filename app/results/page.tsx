@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { FlightCard } from "@/components/booking/FlightCard";
 import { LoadingPanel, PageShell } from "@/components/booking/PageShell";
 import {
@@ -10,8 +10,9 @@ import {
   passengerCount,
 } from "@/components/booking/format";
 import { chip } from "@/components/booking/styles";
-import { FLIGHTS } from "@/lib/flights";
+import { flightsForRoute } from "@/lib/flights";
 import { useBooking } from "@/lib/store";
+import type { Flight } from "@/lib/types";
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -20,20 +21,22 @@ export default function ResultsPage() {
   const fare = useBooking((state) => state.fare);
   const setFare = useBooking((state) => state.setFare);
   const selectFlight = useBooking((state) => state.selectFlight);
-  const releaseSeat = useBooking((state) => state.releaseSeat);
-  const flightId = useBooking((state) => state.flightId);
+  const chosenFlight = useBooking((state) => state.flight);
   const hydrated = useBooking((state) => state.hydrated);
 
   useEffect(() => {
     setStep("results");
   }, [setStep]);
 
-  const route = FLIGHTS[0];
+  const flights = useMemo(
+    () => flightsForRoute(search.origin, search.destination),
+    [search.origin, search.destination],
+  );
+  const route = flights[0];
 
-  function handleSelect(id: string): void {
-    // A seat belongs to a flight; changing flights invalidates it.
-    if (flightId !== null && flightId !== id) releaseSeat();
-    selectFlight(id);
+  function handleSelect(flight: Flight): void {
+    // The store clears any seats or confirmation when the flight changes.
+    selectFlight(flight);
     router.push("/passengers");
   }
 
@@ -60,7 +63,7 @@ export default function ResultsPage() {
           </span>
         </div>
         <span className="rounded-full border border-[#D9B15C]/20 bg-[#D9B15C]/[0.07] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[#F2D493]">
-          {FLIGHTS.length} flights
+          {flights.length} flights
         </span>
       </div>
 
@@ -68,12 +71,12 @@ export default function ResultsPage() {
         {!hydrated ? (
           <LoadingPanel />
         ) : (
-          FLIGHTS.map((flight) => (
+          flights.map((flight) => (
             <FlightCard
               key={flight.id}
               flight={flight}
               fare={fare}
-              selected={flightId === flight.id}
+              selected={chosenFlight?.id === flight.id}
               onFareChange={setFare}
               onSelect={handleSelect}
             />

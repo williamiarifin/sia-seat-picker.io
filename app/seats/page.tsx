@@ -19,7 +19,7 @@ import { Legend } from "@/components/seats/Legend";
 import { SeatDetailCard } from "@/components/seats/SeatDetailCard";
 import { TravellerStrip } from "@/components/seats/TravellerStrip";
 import { ViewHint } from "@/components/seats/ViewHint";
-import { FARES, flightById } from "@/lib/flights";
+import { FARES } from "@/lib/flights";
 import { SEATS, seatById } from "@/lib/seatmap";
 import { bookingTotal, seatedCount, useBooking } from "@/lib/store";
 import { cabinColor, statusColor } from "@/lib/theme";
@@ -133,7 +133,7 @@ function EmptyState() {
 export default function SeatsPage() {
   const hydrated = useBooking((state) => state.hydrated);
   const setStep = useBooking((state) => state.setStep);
-  const flightId = useBooking((state) => state.flightId);
+  const flight = useBooking((state) => state.flight);
   const phase = useBooking((state) => state.phase);
   const selectedSeatId = useBooking((state) => state.selectedSeatId);
   const hoveredSeatId = useBooking((state) => state.hoveredSeatId);
@@ -151,7 +151,6 @@ export default function SeatsPage() {
     ensureTravellers(useBooking.getState().search.passengers);
   }, [setStep, ensureTravellers]);
 
-  const flight = flightById(flightId);
   const selectedSeat = seatById(selectedSeatId);
   const hoveredSeat = seatById(hoveredSeatId);
 

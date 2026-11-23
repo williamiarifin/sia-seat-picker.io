@@ -12,7 +12,7 @@ interface FlightCardProps {
   fare: FareFamily;
   selected: boolean;
   onFareChange: (fare: FareFamily) => void;
-  onSelect: (id: string) => void;
+  onSelect: (flight: Flight) => void;
 }
 
 export function FlightCard({
@@ -172,7 +172,7 @@ export function FlightCard({
 
         <button
           type="button"
-          onClick={() => onSelect(flight.id)}
+          onClick={() => onSelect(flight)}
           aria-label={`Select ${flight.number}, departs ${flight.depart}`}
           className={primaryButton}
         >

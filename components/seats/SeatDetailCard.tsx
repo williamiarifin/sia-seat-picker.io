@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
-import { FARES, flightById } from "@/lib/flights";
+import { FARES } from "@/lib/flights";
 import { seatById, seatsForRow } from "@/lib/seatmap";
 import {
   bookingTotal,
@@ -82,7 +82,7 @@ export function SeatDetailCard() {
 
   const phase = useBooking((state) => state.phase);
   const selectedSeatId = useBooking((state) => state.selectedSeatId);
-  const flightId = useBooking((state) => state.flightId);
+  const flight = useBooking((state) => state.flight);
   const date = useBooking((state) => state.search.date);
   const travellers = useBooking((state) => state.travellers);
   const activeIndex = useBooking((state) => state.activeIndex);
@@ -102,7 +102,6 @@ export function SeatDetailCard() {
   if (!visible || !seat) return null;
 
   const cabin = cabinColor[seat.cabin];
-  const flight = flightById(flightId);
   const fareLabel = FARES.find((option) => option.id === fare)?.name ?? "Value";
   const confirmed = phase === "confirming";
   const pnr = confirmation?.pnr ?? "—";

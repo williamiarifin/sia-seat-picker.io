@@ -13,7 +13,6 @@ import {
 } from "@/components/booking/format";
 import { CheckCircleIcon, TicketIcon } from "@/components/booking/icons";
 import { primaryButton } from "@/components/booking/styles";
-import { flightById } from "@/lib/flights";
 import { seatById } from "@/lib/seatmap";
 import { bookingGrandTotal, useBooking } from "@/lib/store";
 
@@ -22,7 +21,7 @@ export default function ConfirmationPage() {
   const setStep = useBooking((state) => state.setStep);
   const hydrated = useBooking((state) => state.hydrated);
   const confirmation = useBooking((state) => state.confirmation);
-  const flight = useBooking((state) => flightById(state.flightId));
+  const flight = useBooking((state) => state.flight);
   const travellers = useBooking((state) => state.travellers);
   const seats = useBooking((state) => state.seats);
   const contact = useBooking((state) => state.contact);

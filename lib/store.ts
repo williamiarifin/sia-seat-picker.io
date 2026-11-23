@@ -7,6 +7,7 @@ import type {
   Confirmation,
   ContactDetails,
   FareFamily,
+  Flight,
   ScenePhase,
   SearchParams,
   Seat,
@@ -51,7 +52,8 @@ const initialFilter: SeatFilter = {
 export interface BookingState {
   step: Step;
   search: SearchParams;
-  flightId: string | null;
+  /** The chosen service, stored whole so any route works without lookups. */
+  flight: Flight | null;
   fare: FareFamily;
   travellers: Traveller[];
   contact: ContactDetails;
@@ -68,7 +70,7 @@ export interface BookingState {
 
   setStep: (step: Step) => void;
   updateSearch: (patch: Partial<SearchParams>) => void;
-  selectFlight: (id: string) => void;
+  selectFlight: (flight: Flight) => void;
   setFare: (fare: FareFamily) => void;
   updateContact: (patch: Partial<ContactDetails>) => void;
   updateTraveller: (index: number, patch: Partial<Traveller>) => void;
@@ -90,7 +92,7 @@ export const useBooking = create<BookingState>()(
     (set, get) => ({
       step: "search",
       search: initialSearch,
-      flightId: null,
+      flight: null,
       fare: "value",
       travellers: [blankTraveller()],
       contact: initialContact,
@@ -111,12 +113,12 @@ export const useBooking = create<BookingState>()(
           return { search };
         }),
 
-      selectFlight: (id) =>
+      selectFlight: (flight) =>
         set((state) =>
-          id === state.flightId
+          state.flight?.id === flight.id
             ? { step: "passengers" }
             : {
-                flightId: id,
+                flight,
                 step: "passengers",
                 seats: state.seats.map(() => null),
                 selectedSeatId: null,
@@ -248,7 +250,7 @@ export const useBooking = create<BookingState>()(
         set({
           step: "search",
           search: initialSearch,
-          flightId: null,
+          flight: null,
           fare: "value",
           travellers: [blankTraveller()],
           contact: initialContact,
@@ -263,16 +265,16 @@ export const useBooking = create<BookingState>()(
     }),
     {
       name: "silverkris-booking",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => sessionStorage),
       skipHydration: true,
-      // v1 stored a single `passenger`; that shape cannot be migrated safely,
-      // so fall back to the defaults and start the booking again.
+      // v1 stored a single `passenger`; v2 stored a flightId that cannot be
+      // resolved without the route. Both are dropped for a clean start.
       migrate: (persisted, version) =>
-        version < 2 ? {} : (persisted as Partial<BookingState>),
+        version < 3 ? {} : (persisted as Partial<BookingState>),
       partialize: (state) => ({
         search: state.search,
-        flightId: state.flightId,
+        flight: state.flight,
         fare: state.fare,
         travellers: state.travellers,
         contact: state.contact,
