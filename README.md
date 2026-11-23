@@ -173,9 +173,14 @@ swallowed.
 
 Results are generated from the route, not hard-coded: `flightsForRoute()` in
 `lib/flights.ts` estimates the sector from great-circle distance between the
-selected airports and derives duration, departure/arrival, flight numbers and
-price. Pick SIN → KUL and you get a one-hour hop; pick CGK → SGN and the
-schedule moves accordingly.
+selected airports and derives duration, departure/arrival (converted into the
+destination's local time), flight numbers and price.
+
+24 destinations across four groups — Southeast Asia (Singapore, Johor Bahru,
+Kuala Lumpur, Penang, Denpasar, Jakarta, Ho Chi Minh City, Bangkok, Phuket,
+Phnom Penh, Manila), East Asia (Hong Kong, Taipei, Shanghai, Seoul, Tokyo,
+Osaka), South Asia (Colombo, Malé, Dhaka, Yangon) and Oceania (Perth, Sydney,
+Melbourne) — so SIN → JHB is a 50-minute hop and SIN → Sydney is 8h 45m.
 
 ## How the "fly inside" works
 

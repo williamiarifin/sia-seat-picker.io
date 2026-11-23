@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, JSX } from "react";
-import { AIRPORTS } from "@/lib/flights";
+import { AIRPORTS, REGIONS } from "@/lib/flights";
 import { useBooking } from "@/lib/store";
 import type { CabinClass } from "@/lib/types";
 import { BrandLockup } from "./Brand";
@@ -114,15 +114,7 @@ export function SearchForm(): JSX.Element {
                       }}
                       className={selectClass}
                     >
-                      {AIRPORTS.map((airport) => (
-                        <option
-                          key={airport.code}
-                          value={airport.code}
-                          disabled={airport.code === search.destination}
-                        >
-                          {airport.code} · {airport.city}
-                        </option>
-                      ))}
+                      <AirportOptions exclude={search.destination} />
                     </select>
                     <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35" />
                   </div>
@@ -151,15 +143,7 @@ export function SearchForm(): JSX.Element {
                       }}
                       className={selectClass}
                     >
-                      {AIRPORTS.map((airport) => (
-                        <option
-                          key={airport.code}
-                          value={airport.code}
-                          disabled={airport.code === search.origin}
-                        >
-                          {airport.code} · {airport.city}
-                        </option>
-                      ))}
+                      <AirportOptions exclude={search.origin} />
                     </select>
                     <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35" />
                   </div>
@@ -274,5 +258,28 @@ export function SearchForm(): JSX.Element {
         <div aria-hidden="true" className="hidden lg:block" />
       </div>
     </div>
+  );
+}
+
+/** Destinations grouped by region so a 24-airport list stays browsable. */
+function AirportOptions({ exclude }: { exclude: string }): JSX.Element {
+  return (
+    <>
+      {REGIONS.map((region) => (
+        <optgroup key={region} label={region}>
+          {AIRPORTS.filter((airport) => airport.region === region).map(
+            (airport) => (
+              <option
+                key={airport.code}
+                value={airport.code}
+                disabled={airport.code === exclude}
+              >
+                {airport.code} · {airport.city}
+              </option>
+            ),
+          )}
+        </optgroup>
+      ))}
+    </>
   );
 }
