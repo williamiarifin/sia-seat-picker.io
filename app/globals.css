@@ -134,6 +134,32 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   animation: pulse-soft 2.2s ease-in-out infinite;
 }
 
+/* Printing -------------------------------------------------------------- */
+
+/* Only the boarding pass should reach paper: the 3D canvas and all chrome are
+   hidden with `print:hidden` utilities. */
+@page {
+  size: A4;
+  margin: 14mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #0a1b33;
+  }
+
+  /* Keep the navy stub and gold seat number instead of dropping the fills,
+     which would leave white text on white paper. */
+  .print-exact,
+  .print-exact * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -3,17 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { BoardingPass } from "@/components/booking/BoardingPass";
+import { EmailTicket } from "@/components/booking/EmailTicket";
 import { EmptyState } from "@/components/booking/EmptyState";
 import { LoadingPanel, PageShell } from "@/components/booking/PageShell";
 import {
   cabinLabel,
+  formatLongDate,
   passengerName,
 } from "@/components/booking/format";
 import { CheckCircleIcon, TicketIcon } from "@/components/booking/icons";
 import { primaryButton } from "@/components/booking/styles";
 import { flightById } from "@/lib/flights";
 import { seatById } from "@/lib/seatmap";
-import { useBooking } from "@/lib/store";
+import { bookingTotal, useBooking } from "@/lib/store";
 
 export default function ConfirmationPage() {
   const router = useRouter();
@@ -25,6 +27,7 @@ export default function ConfirmationPage() {
   const passenger = useBooking((state) => state.passenger);
   const search = useBooking((state) => state.search);
   const resetBooking = useBooking((state) => state.resetBooking);
+  const total = useBooking((state) => bookingTotal(state) + 62);
 
   useEffect(() => {
     setStep("confirmation");
@@ -79,18 +82,20 @@ export default function ConfirmationPage() {
       wide
     >
       <div className="mx-auto w-full max-w-[780px]">
-        <BoardingPass
-          pnr={confirmation.pnr}
-          boardingGroup={confirmation.boardingGroup}
-          flight={flight}
-          date={search.date}
-          passenger={traveller}
-          seatId={seatId}
-          seatZone={seat?.zone ?? "Seat confirmed"}
-          cabin={seat ? cabinLabel(seat.cabin) : "Cabin"}
-        />
+        <div className="print-exact">
+          <BoardingPass
+            pnr={confirmation.pnr}
+            boardingGroup={confirmation.boardingGroup}
+            flight={flight}
+            date={search.date}
+            passenger={traveller}
+            seatId={seatId}
+            seatZone={seat?.zone ?? "Seat confirmed"}
+            cabin={seat ? cabinLabel(seat.cabin) : "Cabin"}
+          />
+        </div>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center print:hidden">
           <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-[#D9B15C]/25 bg-[#D9B15C]/10 text-[#F2D493]">
             <CheckCircleIcon className="h-5 w-5" />
           </span>
@@ -99,17 +104,34 @@ export default function ConfirmationPage() {
           </h2>
           <p className="mx-auto mt-2 max-w-md break-words text-sm leading-relaxed text-[#A9BACB]">
             {seat
-              ? `Seat ${seat.id} is yours on ${flight.number}.`
-              : `${flight.number} is booked.`}{" "}
-            {passenger.email
-              ? `We've sent a copy to ${passenger.email}.`
-              : "Show this pass at the gate."}
+              ? `Seat ${seat.id} is yours on ${flight.number}. `
+              : `${flight.number} is booked. `}
+            Keep this pass handy — email yourself a copy or save it as a PDF.
           </p>
+        </div>
 
+        <div className="print:hidden">
+          <EmailTicket
+            defaultEmail={passenger.email}
+            ticket={{
+              passenger,
+              flight,
+              date: formatLongDate(search.date),
+              pnr: confirmation.pnr,
+              boardingGroup: confirmation.boardingGroup,
+              seatId,
+              cabin: seat ? cabinLabel(seat.cabin) : "Cabin",
+              seatZone: seat?.zone ?? "Seat confirmed",
+              total,
+            }}
+          />
+        </div>
+
+        <div className="mt-6 text-center print:hidden">
           <button
             type="button"
             onClick={handleStartOver}
-            className={`${primaryButton} mt-6`}
+            className={primaryButton}
           >
             Start over
           </button>

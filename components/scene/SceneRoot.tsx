@@ -23,7 +23,9 @@ export function SceneRoot() {
   const pathname = usePathname();
   const phase = useBooking((state) => state.phase);
   const [ready, setReady] = useState(false);
-  const isSeats = appPath(pathname) === "/seats";
+  const route = appPath(pathname);
+  const isSeats = route === "/seats";
+  const isConfirmation = route === "/confirmation";
 
   useEffect(() => {
     const mq = window.matchMedia(REDUCE_QUERY);
@@ -37,7 +39,9 @@ export function SceneRoot() {
 
   return (
     <div
-      className={`fixed inset-0 z-0 ${isSeats ? "pointer-events-auto" : "pointer-events-none"}`}
+      className={`fixed inset-0 z-0 transition-opacity duration-700 print:hidden ${
+        isConfirmation ? "opacity-35" : "opacity-100"
+      } ${isSeats ? "pointer-events-auto" : "pointer-events-none"}`}
       aria-hidden
     >
       <Canvas

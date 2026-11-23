@@ -110,3 +110,22 @@ export function TicketIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function MailIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="5.5" width="18" height="13" rx="2.5" />
+      <path d="m4.5 8 6.4 4.7a2 2 0 0 0 2.2 0L19.5 8" />
+    </Icon>
+  );
+}
+
+export function PrintIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M7 8V4h10v4" />
+      <rect x="4" y="8" width="16" height="7" rx="2" />
+      <path d="M7 13h10v7H7z" />
+    </Icon>
+  );
+}

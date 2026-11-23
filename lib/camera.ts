@@ -46,9 +46,9 @@ export const STEP_POSE: Record<Step, Pose> = {
     fov: 62,
   },
   confirmation: {
-    position: [46, 34, 66],
+    position: [70, 48, 96],
     target: [0, 1, 0],
-    fov: 32,
+    fov: 30,
   },
 };
 

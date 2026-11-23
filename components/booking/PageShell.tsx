@@ -29,11 +29,11 @@ export function PageShell({
 }: PageShellProps): JSX.Element {
   return (
     <div
-      className={`pointer-events-auto mx-auto flex min-h-dvh w-full flex-col px-5 pb-20 sm:px-8 sm:pb-24 ${
+      className={`pointer-events-auto mx-auto flex min-h-dvh w-full flex-col px-5 pb-20 sm:px-8 sm:pb-24 print:min-h-0 print:max-w-none print:p-0 ${
         wide ? "max-w-[1280px]" : "max-w-[1100px]"
       }`}
     >
-      <header className="flex flex-col gap-4 pt-6 sm:pt-8 md:flex-row md:items-center md:justify-between md:gap-8">
+      <header className="flex flex-col gap-4 pt-6 sm:pt-8 md:flex-row md:items-center md:justify-between md:gap-8 print:hidden">
         <Link
           href="/"
           aria-label="Silverkris Air — home"
@@ -46,11 +46,11 @@ export function PageShell({
         </div>
       </header>
 
-      <div className="mt-9 sm:mt-12">
+      <div className="mt-9 sm:mt-12 print:hidden">
         {backHref ? (
           <Link
             href={backHref}
-            className="group mb-5 inline-flex cursor-pointer items-center gap-2 text-[10px] font-medium uppercase tracking-[0.2em] text-white/45 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+            className="group mb-5 inline-flex cursor-pointer items-center gap-2 text-[10px] font-medium uppercase tracking-[0.2em] text-white/45 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 print:hidden"
           >
             <ArrowLeftIcon className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
             {backLabel}
@@ -67,7 +67,7 @@ export function PageShell({
         ) : null}
       </div>
 
-      <main className="mt-8 flex-1 sm:mt-10">{children}</main>
+      <main className="mt-8 flex-1 sm:mt-10 print:mt-0">{children}</main>
     </div>
   );
 }

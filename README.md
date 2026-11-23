@@ -53,6 +53,108 @@ GitHub Pages on a **private** repo requires a paid plan; on the free plan the
 repository has to be public. If you would rather keep it private, Vercel or
 Cloudflare Pages work as-is — the export is just static files.
 
+## Emailing the ticket
+
+`/confirmation` can send a real copy of the boarding pass to the address entered
+on the passenger step. Because the site is a static export, this goes through
+[EmailJS](https://www.emailjs.com) directly from the browser — no backend, no
+domain, no API secret.
+
+It degrades gracefully: with no configuration the button is disabled and
+"Save PDF" still works.
+
+### Setup (about two minutes)
+
+1. Create a free EmailJS account and **add a service** (connect Gmail, Outlook
+   or any SMTP mailbox).
+2. **Create an email template.** Set:
+   - **To Email:** `{{to_email}}`
+   - **Subject:** `Your Silverkris Air boarding pass — {{pnr}}`
+   - **Body:** the HTML below (EmailJS' code editor handles it).
+3. Copy the **Service ID**, **Template ID** and **Public Key** from the
+   dashboard.
+4. Provide them to the build, either locally in `.env.local`:
+
+   ```
+   NEXT_PUBLIC_EMAILJS_SERVICE_ID=service_xxxxxxx
+   NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=template_xxxxxxx
+   NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=xxxxxxxxxxxxxxxx
+   ```
+
+   …or for GitHub Pages, add three **repository variables** in
+   Settings → Secrets and variables → Actions → **Variables**:
+   `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, `EMAILJS_PUBLIC_KEY`. The deploy
+   workflow already maps them into the build.
+5. In EmailJS → Account → Security, restrict the public key to your Pages
+   domain (`williamiarifin.github.io`) so nobody else can spend your quota.
+
+### Template variables
+
+| Variable | Example |
+| --- | --- |
+| `to_email` | the address typed on the confirmation page |
+| `passenger_name` | Wei Tan |
+| `pnr` | K7P2QX |
+| `flight_number` / `origin` / `destination` | SQ 938 / SIN / DPS |
+| `origin_city` / `destination_city` | Singapore / Denpasar |
+| `depart` / `arrive` / `duration` | 08:20 / 11:05 / 2h 45m |
+| `date` | Sat 18 December 2026 |
+| `seat` / `cabin` / `seat_zone` | 12A / Economy / Exit row · extra legroom |
+| `boarding_group` | 2 |
+| `gate` / `terminal` | B4 / Terminal 2 |
+| `aircraft` / `registration` | Boeing 737-800 / 9V-MBA |
+| `total` | SGD 402 |
+
+Template body:
+
+```html
+<table width="100%" cellpadding="0" cellspacing="0"
+  style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0a1b33;">
+  <tr>
+    <td style="background:#0a1b33;padding:20px 24px;color:#fff;">
+      <div style="font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#d9b15c;">Silverkris Air</div>
+      <div style="font-size:18px;font-weight:600;margin-top:6px;">Your boarding pass</div>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px;">
+      <div style="font-size:10px;letter-spacing:.18em;color:#6b7a89;">PASSENGER</div>
+      <div style="font-size:18px;font-weight:600;margin:2px 0 18px;">{{passenger_name}}</div>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="font-size:22px;font-weight:700;">{{origin}}</td>
+          <td style="text-align:center;font-size:11px;color:#6b7a89;">{{depart}}<br />{{duration}}</td>
+          <td style="text-align:right;font-size:22px;font-weight:700;">{{destination}}</td>
+        </tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;border-top:1px solid #e6e2d8;">
+        <tr>
+          <td style="padding:12px 0;"><div style="font-size:10px;color:#6b7a89;">FLIGHT</div><div style="font-weight:600;">{{flight_number}}</div></td>
+          <td style="padding:12px 0;"><div style="font-size:10px;color:#6b7a89;">DATE</div><div style="font-weight:600;">{{date}}</div></td>
+          <td style="padding:12px 0;"><div style="font-size:10px;color:#6b7a89;">GATE</div><div style="font-weight:600;">{{gate}}</div></td>
+          <td style="padding:12px 0;text-align:right;"><div style="font-size:10px;color:#6b7a89;">SEAT</div><div style="font-size:22px;font-weight:700;color:#b98f3c;">{{seat}}</div></td>
+        </tr>
+      </table>
+      <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#6b7a89;">
+        Booking reference <strong style="color:#0a1b33;">{{pnr}}</strong> ·
+        {{cabin}} · Boarding group {{boarding_group}}<br />
+        {{terminal}} · {{aircraft}} · {{registration}}
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#0a1b33;padding:14px 24px;color:#8fa3b8;font-size:11px;">
+      Total paid {{total}}. Gate closes 15 minutes before departure.
+    </td>
+  </tr>
+</table>
+```
+
+Free EmailJS plans allow 200 emails a month (2 on the trial tier). If sending
+fails the UI says so and leaves the pass on screen — nothing is silently
+swallowed.
+
+
 ## The flow
 
 ```
