@@ -67,6 +67,9 @@ export async function sendTicketEmail(input: TicketEmailInput): Promise<void> {
       TEMPLATE_ID,
       {
         to_email: input.to.trim(),
+        // Aliases so a template written with {{email}} or {{to}} still works.
+        email: input.to.trim(),
+        to: input.to.trim(),
         to_name: name,
         pnr: input.pnr,
         passenger_name: name,
@@ -97,6 +100,14 @@ export async function sendTicketEmail(input: TicketEmailInput): Promise<void> {
       typeof error === "object" && error !== null && "text" in error
         ? String((error as { text: unknown }).text)
         : "";
+
+    // The most common misconfiguration: the template has no recipient wired up.
+    if (/recipients? address is empty/i.test(detail)) {
+      throw new EmailError(
+        "EmailJS had no recipient. Set the template's To Email field to {{to_email}} and save, then try again.",
+      );
+    }
+
     throw new EmailError(
       detail
         ? `The mail service rejected the message: ${detail}`
