@@ -17,10 +17,11 @@ import {
 } from "@/components/seats/icons";
 import { Legend } from "@/components/seats/Legend";
 import { SeatDetailCard } from "@/components/seats/SeatDetailCard";
+import { TravellerStrip } from "@/components/seats/TravellerStrip";
 import { ViewHint } from "@/components/seats/ViewHint";
 import { FARES, flightById } from "@/lib/flights";
 import { SEATS, seatById } from "@/lib/seatmap";
-import { useBooking } from "@/lib/store";
+import { bookingTotal, seatedCount, useBooking } from "@/lib/store";
 import { cabinColor, statusColor } from "@/lib/theme";
 import type { ScenePhase, Seat } from "@/lib/types";
 
@@ -139,22 +140,25 @@ export default function SeatsPage() {
   const fare = useBooking((state) => state.fare);
   const filter = useBooking((state) => state.filter);
   const search = useBooking((state) => state.search);
+  const ensureTravellers = useBooking((state) => state.ensureTravellers);
+  const seated = useBooking(seatedCount);
+  const bookedTotal = useBooking(bookingTotal);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     setStep("seats");
-  }, [setStep]);
+    ensureTravellers(useBooking.getState().search.passengers);
+  }, [setStep, ensureTravellers]);
 
   const flight = flightById(flightId);
   const selectedSeat = seatById(selectedSeatId);
   const hoveredSeat = seatById(hoveredSeatId);
 
   const farePrice = FARES.find((option) => option.id === fare)?.price ?? 0;
-  const headlinePrice = selectedSeat
-    ? selectedSeat.price + farePrice
-    : CHEAPEST_AVAILABLE + farePrice;
-  const priceLabel = selectedSeat ? "Total" : "From";
+  const headlinePrice =
+    seated > 0 ? bookedTotal : CHEAPEST_AVAILABLE + farePrice;
+  const priceLabel = seated > 0 ? "Total" : "From";
   const currentPhaseLabel = phaseLabel(phase, selectedSeatId);
 
   const activeFilterCount =
@@ -243,9 +247,10 @@ export default function SeatsPage() {
       </header>
 
       <aside
-        aria-label="Seat filters, legend and cabin availability"
+        aria-label="Travellers, seat filters, legend and cabin availability"
         className="no-scrollbar pointer-events-none absolute left-5 top-[92px] z-30 hidden max-h-[calc(100dvh_-_176px)] w-[296px] flex-col gap-2.5 overflow-y-auto overscroll-contain lg:flex lg:[&>section]:shrink-0"
       >
+        <TravellerStrip />
         <FilterBar />
         <Legend />
         <CabinSummary />
@@ -380,6 +385,7 @@ export default function SeatsPage() {
                   className="overflow-hidden"
                 >
                   <div className="no-scrollbar max-h-[56dvh] space-y-2 overflow-y-auto overscroll-contain px-2 pb-2.5">
+                    <TravellerStrip />
                     <FilterBar />
                     <Legend />
                     <CabinSummary />

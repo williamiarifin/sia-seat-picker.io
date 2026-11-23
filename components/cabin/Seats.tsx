@@ -65,6 +65,7 @@ function SeatSet({ cabin, parts }: SeatSetProps) {
 
   const hoveredSeatId = useBooking((state) => state.hoveredSeatId);
   const selectedSeatId = useBooking((state) => state.selectedSeatId);
+  const assignedSeatIds = useBooking((state) => state.seats);
   const filter = useBooking((state) => state.filter);
   const hoverSeat = useBooking((state) => state.hoverSeat);
   const selectSeat = useBooking((state) => state.selectSeat);
@@ -100,7 +101,8 @@ function SeatSet({ cabin, parts }: SeatSetProps) {
     for (let index = 0; index < seats.length; index += 1) {
       const seat = seats[index];
       const isHovered = seat.id === hoveredSeatId;
-      const isSelected = seat.id === selectedSeatId;
+      const isSelected =
+        seat.id === selectedSeatId || assignedSeatIds.includes(seat.id);
       const isOccupied = seat.status === "occupied";
       const lift = isSelected ? 0.06 : isHovered ? 0.04 : 0;
 
@@ -156,7 +158,7 @@ function SeatSet({ cabin, parts }: SeatSetProps) {
     if (upholstery.instanceColor) upholstery.instanceColor.needsUpdate = true;
     if (frameMesh.instanceColor) frameMesh.instanceColor.needsUpdate = true;
     if (accentMesh.instanceColor) accentMesh.instanceColor.needsUpdate = true;
-  }, [seats, hoveredSeatId, selectedSeatId, filter, palette]);
+  }, [seats, hoveredSeatId, selectedSeatId, assignedSeatIds, filter, palette]);
 
   const handleMove = (event: ThreeEvent<PointerEvent>) => {
     const instanceId = event.instanceId;

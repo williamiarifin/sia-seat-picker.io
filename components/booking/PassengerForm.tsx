@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, JSX } from "react";
 import { useBooking } from "@/lib/store";
 import type { Flight } from "@/lib/types";
@@ -19,27 +19,24 @@ interface PassengerFormProps {
   flight: Flight;
 }
 
-interface FormErrors {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-}
-
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export function PassengerForm({ flight }: PassengerFormProps): JSX.Element {
   const router = useRouter();
-  const passenger = useBooking((state) => state.passenger);
-  const updatePassenger = useBooking((state) => state.updatePassenger);
   const search = useBooking((state) => state.search);
+  const travellers = useBooking((state) => state.travellers);
+  const contact = useBooking((state) => state.contact);
+  const updateTraveller = useBooking((state) => state.updateTraveller);
+  const updateContact = useBooking((state) => state.updateContact);
+  const ensureTravellers = useBooking((state) => state.ensureTravellers);
 
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const firstNameRef = useRef<HTMLInputElement>(null);
-  const lastNameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ensureTravellers(search.passengers);
+  }, [ensureTravellers, search.passengers]);
 
-  function clearError(key: keyof FormErrors): void {
+  function clearError(key: string): void {
     setErrors((previous) => {
       if (!previous[key]) return previous;
       const next = { ...previous };
@@ -48,19 +45,24 @@ export function PassengerForm({ flight }: PassengerFormProps): JSX.Element {
     });
   }
 
-  function validate(): FormErrors {
-    const next: FormErrors = {};
-    if (passenger.firstName.trim().length < 2) {
-      next.firstName = "Enter your first name as it appears on your passport.";
-    }
-    if (passenger.lastName.trim().length < 2) {
-      next.lastName = "Enter your last name as it appears on your passport.";
-    }
-    if (passenger.email.trim().length === 0) {
-      next.email = "Enter your email so we can send your boarding pass.";
-    } else if (!EMAIL_PATTERN.test(passenger.email.trim())) {
+  function validate(): Record<string, string> {
+    const next: Record<string, string> = {};
+
+    travellers.forEach((traveller, index) => {
+      if (traveller.firstName.trim().length < 2) {
+        next[`${index}.firstName`] = "Enter the first name as printed on the passport.";
+      }
+      if (traveller.lastName.trim().length < 2) {
+        next[`${index}.lastName`] = "Enter the last name as printed on the passport.";
+      }
+    });
+
+    if (contact.email.trim().length === 0) {
+      next.email = "Enter an email so we can send the boarding passes.";
+    } else if (!EMAIL_PATTERN.test(contact.email.trim())) {
       next.email = "That email address doesn't look quite right.";
     }
+
     return next;
   }
 
@@ -69,18 +71,13 @@ export function PassengerForm({ flight }: PassengerFormProps): JSX.Element {
     const next = validate();
     setErrors(next);
 
-    if (next.firstName) {
-      firstNameRef.current?.focus();
+    const firstKey = Object.keys(next)[0];
+    if (firstKey) {
+      const id = firstKey === "email" ? "contact-email" : `traveller-${firstKey}`;
+      document.getElementById(id)?.focus();
       return;
     }
-    if (next.lastName) {
-      lastNameRef.current?.focus();
-      return;
-    }
-    if (next.email) {
-      emailRef.current?.focus();
-      return;
-    }
+
     router.push("/seats");
   }
 
@@ -94,152 +91,185 @@ export function PassengerForm({ flight }: PassengerFormProps): JSX.Element {
         className="mb-5"
       />
 
-      <div className="glass rounded-3xl p-6 sm:p-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[9.5px] font-medium uppercase tracking-[0.24em] text-[#D9B15C]">
-              Lead passenger
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="glass rounded-3xl p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[9.5px] font-medium uppercase tracking-[0.24em] text-[#D9B15C]">
+                {travellers.length > 1 ? "Travellers" : "Traveller"}
+              </p>
+              <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-white">
+                Who is flying?
+              </h2>
+            </div>
+            <span className="tnum shrink-0 rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-white/40">
+              {travellers.length} {travellers.length === 1 ? "seat" : "seats"}
+            </span>
+          </div>
+
+          <p className="mt-2 text-xs leading-relaxed text-white/40">
+            Enter each name exactly as it appears on the passport. Every
+            traveller gets their own boarding pass.
+          </p>
+
+          <div className="mt-6 space-y-4">
+            {travellers.map((traveller, index) => {
+              const firstError = errors[`${index}.firstName`];
+              const lastError = errors[`${index}.lastName`];
+
+              return (
+                <fieldset
+                  key={index}
+                  className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4"
+                >
+                  <legend className="sr-only">
+                    Traveller {index + 1}
+                  </legend>
+
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
+                      <span className="tnum grid h-6 w-6 place-items-center rounded-full border border-white/10 text-[9px] text-white/50">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      {index === 0 ? "Lead passenger" : `Traveller ${index + 1}`}
+                    </span>
+                    {index === 0 && travellers.length > 1 ? (
+                      <span className="rounded-full border border-[#D9B15C]/25 bg-[#D9B15C]/10 px-2 py-0.5 text-[8.5px] uppercase tracking-[0.14em] text-[#F2D493]">
+                        Contact
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="min-w-0">
+                      <label
+                        htmlFor={`traveller-${index}.firstName`}
+                        className={labelBase}
+                      >
+                        First name
+                      </label>
+                      <input
+                        id={`traveller-${index}.firstName`}
+                        type="text"
+                        autoComplete={index === 0 ? "given-name" : "off"}
+                        value={traveller.firstName}
+                        onChange={(event) => {
+                          updateTraveller(index, {
+                            firstName: event.target.value,
+                          });
+                          clearError(`${index}.firstName`);
+                        }}
+                        aria-invalid={Boolean(firstError)}
+                        placeholder={index === 0 ? "Amelia" : "First name"}
+                        className={firstError ? inputInvalid : inputDefault}
+                      />
+                      {firstError ? (
+                        <p
+                          role="alert"
+                          className="mt-1.5 text-[11px] leading-snug text-[#F2B4AC]"
+                        >
+                          {firstError}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="min-w-0">
+                      <label
+                        htmlFor={`traveller-${index}.lastName`}
+                        className={labelBase}
+                      >
+                        Last name
+                      </label>
+                      <input
+                        id={`traveller-${index}.lastName`}
+                        type="text"
+                        autoComplete={index === 0 ? "family-name" : "off"}
+                        value={traveller.lastName}
+                        onChange={(event) => {
+                          updateTraveller(index, {
+                            lastName: event.target.value,
+                          });
+                          clearError(`${index}.lastName`);
+                        }}
+                        aria-invalid={Boolean(lastError)}
+                        placeholder={index === 0 ? "Tan" : "Last name"}
+                        className={lastError ? inputInvalid : inputDefault}
+                      />
+                      {lastError ? (
+                        <p
+                          role="alert"
+                          className="mt-1.5 text-[11px] leading-snug text-[#F2B4AC]"
+                        >
+                          {lastError}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </fieldset>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 border-t border-white/[0.08] pt-6">
+            <h3 className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Where should we send the passes?
+            </h3>
+            <p className="mt-1.5 text-[11.5px] leading-relaxed text-white/35">
+              All {travellers.length > 1 ? `${travellers.length} boarding passes` : "boarding pass"}{" "}
+              go to this address. You can change it on the confirmation screen.
             </p>
-            <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-white">
-              Traveller 1
-            </h2>
-          </div>
-          <span
-            aria-hidden="true"
-            className="tnum flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-[11px] text-white/35"
-          >
-            01
-          </span>
-        </div>
 
-        <p className="mt-2 text-xs leading-relaxed text-white/40">
-          Enter the name exactly as it appears on the passport or travel
-          document.
-        </p>
-
-        <form onSubmit={handleSubmit} noValidate className="mt-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="min-w-0">
-              <label htmlFor="passenger-first-name" className={labelBase}>
-                First name
+            <div className="mt-4">
+              <label htmlFor="contact-email" className={labelBase}>
+                Email
               </label>
               <input
-                ref={firstNameRef}
-                id="passenger-first-name"
-                type="text"
-                autoComplete="given-name"
-                value={passenger.firstName}
+                id="contact-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={contact.email}
                 onChange={(event) => {
-                  updatePassenger({ firstName: event.target.value });
-                  clearError("firstName");
+                  updateContact({ email: event.target.value });
+                  clearError("email");
                 }}
-                aria-invalid={Boolean(errors.firstName)}
-                aria-describedby={
-                  errors.firstName ? "passenger-first-name-error" : undefined
-                }
-                placeholder="Amelia"
-                className={errors.firstName ? inputInvalid : inputDefault}
+                aria-invalid={Boolean(errors.email)}
+                placeholder="amelia.tan@example.com"
+                className={errors.email ? inputInvalid : inputDefault}
               />
-              {errors.firstName ? (
+              {errors.email ? (
                 <p
-                  id="passenger-first-name-error"
                   role="alert"
                   className="mt-1.5 text-[11px] leading-snug text-[#F2B4AC]"
                 >
-                  {errors.firstName}
+                  {errors.email}
                 </p>
               ) : null}
             </div>
 
-            <div className="min-w-0">
-              <label htmlFor="passenger-last-name" className={labelBase}>
-                Last name
+            <div className="mt-4">
+              <label htmlFor="contact-phone" className={labelBase}>
+                Phone{" "}
+                <span className="normal-case tracking-normal text-white/25">
+                  (optional)
+                </span>
               </label>
               <input
-                ref={lastNameRef}
-                id="passenger-last-name"
-                type="text"
-                autoComplete="family-name"
-                value={passenger.lastName}
-                onChange={(event) => {
-                  updatePassenger({ lastName: event.target.value });
-                  clearError("lastName");
-                }}
-                aria-invalid={Boolean(errors.lastName)}
-                aria-describedby={
-                  errors.lastName ? "passenger-last-name-error" : undefined
+                id="contact-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={contact.phone}
+                onChange={(event) =>
+                  updateContact({ phone: event.target.value })
                 }
-                placeholder="Tan"
-                className={errors.lastName ? inputInvalid : inputDefault}
+                placeholder="+65 9123 4567"
+                className={inputDefault}
               />
-              {errors.lastName ? (
-                <p
-                  id="passenger-last-name-error"
-                  role="alert"
-                  className="mt-1.5 text-[11px] leading-snug text-[#F2B4AC]"
-                >
-                  {errors.lastName}
-                </p>
-              ) : null}
             </div>
           </div>
 
-          <div className="mt-4">
-            <label htmlFor="passenger-email" className={labelBase}>
-              Email
-            </label>
-            <input
-              ref={emailRef}
-              id="passenger-email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={passenger.email}
-              onChange={(event) => {
-                updatePassenger({ email: event.target.value });
-                clearError("email");
-              }}
-              aria-invalid={Boolean(errors.email)}
-              aria-describedby={
-                errors.email ? "passenger-email-error" : "passenger-email-hint"
-              }
-              placeholder="amelia.tan@example.com"
-              className={errors.email ? inputInvalid : inputDefault}
-            />
-            {errors.email ? (
-              <p
-                id="passenger-email-error"
-                role="alert"
-                className="mt-1.5 text-[11px] leading-snug text-[#F2B4AC]"
-              >
-                {errors.email}
-              </p>
-            ) : (
-              <p id="passenger-email-hint" className="mt-1.5 text-[11px] text-white/30">
-                Your boarding pass and updates will be sent here.
-              </p>
-            )}
-          </div>
-
-          <div className="mt-4">
-            <label htmlFor="passenger-phone" className={labelBase}>
-              Phone <span className="normal-case tracking-normal text-white/25">(optional)</span>
-            </label>
-            <input
-              id="passenger-phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              value={passenger.phone}
-              onChange={(event) =>
-                updatePassenger({ phone: event.target.value })
-              }
-              placeholder="+65 9123 4567"
-              className={inputDefault}
-            />
-          </div>
-
-          <button type="submit" className={`${primaryButton} mt-6 w-full`}>
+          <button type="submit" className={`${primaryButton} mt-7 w-full`}>
             Continue to seats
             <ArrowRightIcon className="h-4 w-4" />
           </button>
@@ -248,8 +278,8 @@ export function PassengerForm({ flight }: PassengerFormProps): JSX.Element {
             <LockIcon className="h-3 w-3" />
             Your details are only used for this booking.
           </p>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

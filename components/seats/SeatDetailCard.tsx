@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { FARES, flightById } from "@/lib/flights";
 import { seatById, seatsForRow } from "@/lib/seatmap";
-import { useBooking } from "@/lib/store";
+import {
+  bookingTotal,
+  isFullySeated,
+  seatedCount,
+  useBooking,
+} from "@/lib/store";
 import { cabinColor } from "@/lib/theme";
 import type { Seat } from "@/lib/types";
 
@@ -67,7 +72,6 @@ function SeatRowGlyph({ seat }: { seat: Seat }) {
           />
         ))}
       </div>
-
     </div>
   );
 }
@@ -79,11 +83,18 @@ export function SeatDetailCard() {
   const phase = useBooking((state) => state.phase);
   const selectedSeatId = useBooking((state) => state.selectedSeatId);
   const flightId = useBooking((state) => state.flightId);
-  const fare = useBooking((state) => state.fare);
   const date = useBooking((state) => state.search.date);
+  const travellers = useBooking((state) => state.travellers);
+  const activeIndex = useBooking((state) => state.activeIndex);
+  const seats = useBooking((state) => state.seats);
+  const fare = useBooking((state) => state.fare);
   const confirmation = useBooking((state) => state.confirmation);
   const confirmSeat = useBooking((state) => state.confirmSeat);
+  const nextTraveller = useBooking((state) => state.nextTraveller);
   const releaseSeat = useBooking((state) => state.releaseSeat);
+  const total = useBooking((state) => bookingTotal(state));
+  const allSeated = useBooking(isFullySeated);
+  const seated = useBooking(seatedCount);
 
   const seat = seatById(selectedSeatId);
   const visible = phase === "in-seat" || phase === "confirming";
@@ -92,15 +103,27 @@ export function SeatDetailCard() {
 
   const cabin = cabinColor[seat.cabin];
   const flight = flightById(flightId);
-  const fareInfo = FARES.find((option) => option.id === fare);
-  const farePrice = fareInfo?.price ?? 0;
-  const total = seat.price + farePrice;
+  const fareLabel = FARES.find((option) => option.id === fare)?.name ?? "Value";
   const confirmed = phase === "confirming";
   const pnr = confirmation?.pnr ?? "—";
 
+  const traveller = travellers[activeIndex] ?? { firstName: "", lastName: "" };
+  const travellerName =
+    `${traveller.firstName} ${traveller.lastName}`.trim() ||
+    `Traveller ${activeIndex + 1}`;
+
+  const nextIndex = activeIndex + 1;
+  const nextName =
+    travellers[nextIndex] !== undefined
+      ? `${travellers[nextIndex].firstName} ${travellers[nextIndex].lastName}`.trim() ||
+        `Traveller ${nextIndex + 1}`
+      : null;
+  const moreToSeat = seats.some((assigned, index) => !assigned && index !== activeIndex);
+  const isLast = !moreToSeat;
+
   return (
     <motion.section
-      aria-label={`Seat ${seat.id} details`}
+      aria-label={`Seat ${seat.id} for ${travellerName}`}
       onClick={(event) => event.stopPropagation()}
       initial={
         reduceMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.985 }
@@ -136,8 +159,10 @@ export function SeatDetailCard() {
           <h2 className="tnum mt-2 text-[54px] font-semibold leading-[0.85] tracking-[-0.045em] text-white sm:text-[62px]">
             {seat.id}
           </h2>
-          <p className="mt-2 text-[11px] leading-relaxed text-mist sm:mt-2.5">
-            {seat.zone}
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-relaxed text-mist sm:mt-2.5">
+            <span className="font-medium text-white/90">{travellerName}</span>
+            <span className="text-mist/30">·</span>
+            <span>{seat.zone}</span>
           </p>
         </div>
 
@@ -158,29 +183,18 @@ export function SeatDetailCard() {
         </span>
       </div>
 
-      <p className="mt-2.5 flex gap-2 text-[11px] leading-relaxed text-mist/85 sm:mt-3">
-        <span
-          aria-hidden="true"
-          className="mt-[5px] h-1 w-1 shrink-0 rounded-full"
-          style={{ backgroundColor: cabin.base }}
-        />
-        {cabin.perk}
-      </p>
-
       <div className="mt-3.5 rounded-xl border border-white/[0.07] bg-[#050d1a]/35 p-3 sm:mt-4 sm:p-3.5">
         <div className="flex items-baseline justify-between gap-3 text-[11px]">
-          <span className="text-mist">Seat {seat.id} selection</span>
+          <span className="text-mist">Seat {seat.id}</span>
           <span className="tnum text-white/85">{formatSGD(seat.price)}</span>
         </div>
         <div className="mt-1.5 flex items-baseline justify-between gap-3 text-[11px]">
-          <span className="text-mist">{fareInfo?.name ?? "Value"} fare</span>
-          <span className="tnum text-white/85">
-            {farePrice === 0 ? "Included" : `+ ${formatSGD(farePrice)}`}
-          </span>
+          <span className="text-mist">{fareLabel} fare</span>
+          <span className="tnum text-white/85">Once per booking</span>
         </div>
         <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-white/[0.07] pt-2.5">
           <span className="text-[9px] uppercase tracking-[0.18em] text-mist/50">
-            Total
+            {seated > 1 ? `Booking total · ${seated} seats` : "Booking total"}
           </span>
           <span className="gold-text tnum text-xl font-semibold tracking-tight">
             {formatSGD(total)}
@@ -226,7 +240,7 @@ export function SeatDetailCard() {
                     ) : null}
                   </div>
                   <p className="mt-1 text-[10px] text-mist/65">
-                    Booking reference
+                    {travellerName} · Booking ref
                   </p>
                   <p className="tnum mt-0.5 text-[15px] font-medium tracking-[0.26em] text-[#F2D493]">
                     {pnr}
@@ -235,17 +249,31 @@ export function SeatDetailCard() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                router.push("/review");
-              }}
-              className={`group mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#F2D493] to-[#C99B3F] text-[12.5px] font-semibold tracking-wide text-[#0A1B33] shadow-[0_12px_32px_-14px_rgba(217,177,92,0.65)] transition hover:brightness-[1.06] active:scale-[0.99] ${BUTTON_FOCUS}`}
-            >
-              Continue to payment
-              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
+            {!isLast ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  nextTraveller();
+                }}
+                className={`group mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#F2D493] to-[#C99B3F] text-[12.5px] font-semibold tracking-wide text-[#0A1B33] shadow-[0_12px_32px_-14px_rgba(217,177,92,0.65)] transition hover:brightness-[1.06] active:scale-[0.99] ${BUTTON_FOCUS}`}
+              >
+                {nextName ? `Next: ${nextName}` : "Next traveller"}
+                <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  router.push("/review");
+                }}
+                className={`group mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#F2D493] to-[#C99B3F] text-[12.5px] font-semibold tracking-wide text-[#0A1B33] shadow-[0_12px_32px_-14px_rgba(217,177,92,0.65)] transition hover:brightness-[1.06] active:scale-[0.99] ${BUTTON_FOCUS}`}
+              >
+                {allSeated ? "Continue to payment" : "Continue with seats so far"}
+                <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            )}
 
             <button
               type="button"
@@ -275,7 +303,7 @@ export function SeatDetailCard() {
               }}
               className={`group flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#F2D493] to-[#C99B3F] text-[12.5px] font-semibold tracking-wide text-[#0A1B33] shadow-[0_12px_32px_-14px_rgba(217,177,92,0.65)] transition hover:brightness-[1.06] active:scale-[0.99] ${BUTTON_FOCUS}`}
             >
-              Confirm this seat
+              Confirm for {traveller.firstName || `traveller ${activeIndex + 1}`}
               <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
 

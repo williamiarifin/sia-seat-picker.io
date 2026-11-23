@@ -15,7 +15,7 @@ import { CheckCircleIcon, TicketIcon } from "@/components/booking/icons";
 import { primaryButton } from "@/components/booking/styles";
 import { flightById } from "@/lib/flights";
 import { seatById } from "@/lib/seatmap";
-import { bookingTotal, useBooking } from "@/lib/store";
+import { bookingGrandTotal, useBooking } from "@/lib/store";
 
 export default function ConfirmationPage() {
   const router = useRouter();
@@ -23,11 +23,12 @@ export default function ConfirmationPage() {
   const hydrated = useBooking((state) => state.hydrated);
   const confirmation = useBooking((state) => state.confirmation);
   const flight = useBooking((state) => flightById(state.flightId));
-  const seat = useBooking((state) => seatById(state.selectedSeatId));
-  const passenger = useBooking((state) => state.passenger);
+  const travellers = useBooking((state) => state.travellers);
+  const seats = useBooking((state) => state.seats);
+  const contact = useBooking((state) => state.contact);
   const search = useBooking((state) => state.search);
   const resetBooking = useBooking((state) => state.resetBooking);
-  const total = useBooking((state) => bookingTotal(state) + 62);
+  const total = useBooking(bookingGrandTotal);
 
   useEffect(() => {
     setStep("confirmation");
@@ -41,7 +42,7 @@ export default function ConfirmationPage() {
   if (!hydrated) {
     return (
       <PageShell
-        title="Your boarding pass"
+        title="Your boarding passes"
         subtitle="Just a moment while we fetch your booking."
       >
         <div className="mx-auto w-full max-w-[780px]">
@@ -51,11 +52,19 @@ export default function ConfirmationPage() {
     );
   }
 
-  if (!confirmation || !flight) {
+  const issued = travellers
+    .map((traveller, index) => ({
+      traveller,
+      name: passengerName(traveller, `Traveller ${index + 1}`),
+      seat: seatById(seats[index]),
+    }))
+    .filter((entry) => entry.seat !== undefined);
+
+  if (!confirmation || !flight || issued.length === 0) {
     return (
       <PageShell
-        title="Your boarding pass"
-        subtitle="This is where your seat, gate and boarding group will live."
+        title="Your boarding passes"
+        subtitle="This is where your seats, gate and boarding group will live."
         backHref="/"
         backLabel="Home"
       >
@@ -63,36 +72,62 @@ export default function ConfirmationPage() {
           className="mx-auto"
           icon={<TicketIcon className="h-5 w-5" />}
           title="No booking yet"
-          body="Choose a flight, pick your seat and confirm the details — your boarding pass will appear here."
+          body="Choose a flight, pick seats for everyone travelling and confirm the details — your boarding passes will appear here."
           cta="Start a new search"
           href="/"
-          footnote="Your boarding pass appears here as soon as you confirm a seat."
+          footnote="Your boarding passes appear here as soon as you confirm a seat."
         />
       </PageShell>
     );
   }
 
-  const traveller = passengerName(passenger, "Guest traveller");
-  const seatId = seat?.id ?? "—";
+  const plural = issued.length > 1;
+  const date = formatLongDate(search.date);
+
+  const tickets = issued.map((entry, index) => ({
+    passenger: entry.traveller,
+    flight,
+    date,
+    pnr: confirmation.pnr,
+    boardingGroup: confirmation.boardingGroup,
+    seatId: entry.seat!.id,
+    cabin: cabinLabel(entry.seat!.cabin),
+    seatZone: entry.seat!.zone,
+    total,
+    passengerLabel: `Passenger ${index + 1} of ${issued.length}`,
+  }));
 
   return (
     <PageShell
       title="You're all set"
-      subtitle="Your booking is complete. Everything you need for the gate is below."
+      subtitle={
+        plural
+          ? `All ${issued.length} boarding passes are ready. Everything you need for the gate is below.`
+          : "Your booking is complete. Everything you need for the gate is below."
+      }
       wide
     >
       <div className="mx-auto w-full max-w-[780px]">
-        <div className="print-exact">
-          <BoardingPass
-            pnr={confirmation.pnr}
-            boardingGroup={confirmation.boardingGroup}
-            flight={flight}
-            date={search.date}
-            passenger={traveller}
-            seatId={seatId}
-            seatZone={seat?.zone ?? "Seat confirmed"}
-            cabin={seat ? cabinLabel(seat.cabin) : "Cabin"}
-          />
+        <div className="print-exact space-y-5">
+          {issued.map((entry, index) => (
+            <div key={entry.traveller.firstName + index} className="relative">
+              {plural ? (
+                <p className="mb-2 text-[9.5px] font-medium uppercase tracking-[0.24em] text-[#D9B15C]/70 print:hidden">
+                  Passenger {index + 1} of {issued.length}
+                </p>
+              ) : null}
+              <BoardingPass
+                pnr={confirmation.pnr}
+                boardingGroup={confirmation.boardingGroup}
+                flight={flight}
+                date={search.date}
+                passenger={entry.name}
+                seatId={entry.seat!.id}
+                seatZone={entry.seat!.zone}
+                cabin={cabinLabel(entry.seat!.cabin)}
+              />
+            </div>
+          ))}
         </div>
 
         <div className="mt-8 text-center print:hidden">
@@ -100,44 +135,28 @@ export default function ConfirmationPage() {
             <CheckCircleIcon className="h-5 w-5" />
           </span>
           <h2 className="mt-4 text-balance text-2xl font-semibold tracking-tight text-white sm:text-[28px]">
-            Your seat is confirmed
+            {plural ? "Your seats are confirmed" : "Your seat is confirmed"}
           </h2>
           <p className="mx-auto mt-2 max-w-md break-words text-sm leading-relaxed text-[#A9BACB]">
-            {seat
-              ? `Seat ${seat.id} is yours on ${flight.number}. `
-              : `${flight.number} is booked. `}
-            Keep this pass handy — email yourself a copy or save it as a PDF.
+            {issued
+              .map((entry) => `${entry.name.split(" ")[0]} ${entry.seat!.id}`)
+              .join(" · ")}
+            . Keep these passes handy — email them or save a PDF.
           </p>
         </div>
 
         <div className="print:hidden">
-          <EmailTicket
-            defaultEmail={passenger.email}
-            ticket={{
-              passenger,
-              flight,
-              date: formatLongDate(search.date),
-              pnr: confirmation.pnr,
-              boardingGroup: confirmation.boardingGroup,
-              seatId,
-              cabin: seat ? cabinLabel(seat.cabin) : "Cabin",
-              seatZone: seat?.zone ?? "Seat confirmed",
-              total,
-            }}
-          />
+          <EmailTicket defaultEmail={contact.email} tickets={tickets} />
         </div>
 
         <div className="mt-6 text-center print:hidden">
-          <button
-            type="button"
-            onClick={handleStartOver}
-            className={primaryButton}
-          >
+          <button type="button" onClick={handleStartOver} className={primaryButton}>
             Start over
           </button>
 
           <p className="mt-3 text-[10px] uppercase tracking-[0.16em] text-white/30">
-            Booking ref <span className="tnum text-white/50">{confirmation.pnr}</span>
+            Booking ref{" "}
+            <span className="tnum text-white/50">{confirmation.pnr}</span>
           </p>
         </div>
       </div>

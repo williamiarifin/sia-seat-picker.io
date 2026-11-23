@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent, JSX, ReactNode } from "react";
 import { seatById } from "@/lib/seatmap";
-import { bookingTotal, useBooking } from "@/lib/store";
-import type { Flight } from "@/lib/types";
+import {
+  TAXES_PER_TRAVELLER,
+  bookingGrandTotal,
+  bookingTotal,
+  isFullySeated,
+  useBooking,
+} from "@/lib/store";
+import type { Flight, Seat, Traveller } from "@/lib/types";
 import {
   cabinLabel,
   fareByFamily,
@@ -19,14 +25,8 @@ import {
   passengerCount,
   passengerName,
   sgd,
-  seatSelectionFee,
 } from "./format";
-import {
-  ArrowRightIcon,
-  LockIcon,
-  PlaneIcon,
-  SeatIcon,
-} from "./icons";
+import { ArrowRightIcon, LockIcon, PlaneIcon, SeatIcon } from "./icons";
 import {
   chip,
   eyebrow,
@@ -39,32 +39,49 @@ interface OrderSummaryProps {
   flight: Flight;
 }
 
+interface SeatLine {
+  traveller: Traveller;
+  label: string;
+  seat: Seat | undefined;
+}
+
 export function OrderSummary({ flight }: OrderSummaryProps): JSX.Element {
   const router = useRouter();
 
   const search = useBooking((state) => state.search);
   const fare = useBooking((state) => state.fare);
-  const passenger = useBooking((state) => state.passenger);
-  const seatId = useBooking((state) => state.selectedSeatId);
+  const travellers = useBooking((state) => state.travellers);
+  const seats = useBooking((state) => state.seats);
+  const contact = useBooking((state) => state.contact);
   const confirmation = useBooking((state) => state.confirmation);
   const confirmSeat = useBooking((state) => state.confirmSeat);
   const setPhase = useBooking((state) => state.setPhase);
-  const total = useBooking((state) => bookingTotal(state) + 62);
+
+  const total = useBooking(bookingGrandTotal);
+  const subtotal = useBooking(bookingTotal);
+  const allSeated = useBooking(isFullySeated);
 
   const [card, setCard] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [nameOnCard, setNameOnCard] = useState("");
 
-  const seat = seatById(seatId);
-  const traveller = passengerName(passenger, "Guest traveller");
-  const chosenFare = fareByFamily(fare);
+  const lines: SeatLine[] = travellers.map((traveller, index) => ({
+    traveller,
+    label: passengerName(traveller, `Traveller ${index + 1}`),
+    seat: seatById(seats[index]),
+  }));
+
+  const seatsTotal = lines.reduce((sum, line) => sum + (line.seat?.price ?? 0), 0);
   const fareDelta = farePrice(fare);
-  const selectionFee = seat ? seatSelectionFee(seat) : 0;
-  const fareLine = seat ? seat.price + fareDelta - selectionFee : 0;
+  const taxes = TAXES_PER_TRAVELLER * travellers.length;
+  const chosenFare = fareByFamily(fare);
+  const leadName = lines[0]?.label ?? "Guest traveller";
+  const cabin = cabinLabel(lines.find((line) => line.seat)?.seat?.cabin ?? search.cabin);
 
   const cardDigits = card.replace(/\s/g, "");
   const ready =
+    allSeated &&
     cardDigits.length === 16 &&
     expiry.length === 5 &&
     cvc.length >= 3 &&
@@ -72,7 +89,7 @@ export function OrderSummary({ flight }: OrderSummaryProps): JSX.Element {
 
   function handlePay(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    if (!ready || !seat) return;
+    if (!ready || !allSeated) return;
     if (!confirmation) confirmSeat();
     router.push("/confirmation");
   }
@@ -144,49 +161,65 @@ export function OrderSummary({ flight }: OrderSummaryProps): JSX.Element {
         </p>
 
         <dl className="mt-6 border-t border-white/[0.08]">
-          <SummaryRow label="Passenger">
-            <span className="font-medium text-white">{traveller}</span>
+          <SummaryRow label="Travellers">
+            <span className="font-medium text-white">
+              {lines.length} {lines.length === 1 ? "passenger" : "passengers"}
+            </span>
             <span className="mt-0.5 block text-[11px] text-white/35">
-              {passenger.email || "No email provided"}
+              {contact.email || "No email provided"}
             </span>
           </SummaryRow>
 
           <SummaryRow label="Fare">
             <span className="font-medium text-white">
-              {cabinLabel(seat?.cabin ?? search.cabin)} · {fareName(fare)}
+              {cabin} · {fareName(fare)}
             </span>
             <span className="mt-0.5 block text-[11px] text-white/35">
               {chosenFare.blurb}
             </span>
           </SummaryRow>
 
-          <SummaryRow label="Seat">
-            {seat ? (
-              <span className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
-                <span>
-                  <span className="tnum font-medium text-white">{seat.id}</span>
-                  <span className="mt-0.5 block text-[11px] text-white/35">
-                    {seat.zone}
-                  </span>
-                </span>
-                <Link
-                  href="/seats"
-                  onClick={() => setPhase("overview")}
-                  className="cursor-pointer rounded-full border border-white/12 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/55 transition hover:border-[#D9B15C]/40 hover:text-[#F2D493] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9B15C]/50"
-                >
-                  Change
-                </Link>
-              </span>
-            ) : (
+          <div className="border-b border-white/[0.08] py-3.5">
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/35">
+                Seats
+              </dt>
               <Link
                 href="/seats"
                 onClick={() => setPhase("overview")}
-                className="cursor-pointer text-[11px] font-medium uppercase tracking-[0.12em] text-[#F2D493] underline-offset-4 hover:underline"
+                className="cursor-pointer rounded-full border border-white/12 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/55 transition hover:border-[#D9B15C]/40 hover:text-[#F2D493] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9B15C]/50"
               >
-                Choose a seat
+                {allSeated ? "Change" : "Choose seats"}
               </Link>
-            )}
-          </SummaryRow>
+            </div>
+
+            <ul className="mt-2.5 space-y-2">
+              {lines.map((line, index) => (
+                <li
+                  key={index}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="min-w-0 truncate text-white/75">
+                    {line.label}
+                  </span>
+                  {line.seat ? (
+                    <span className="shrink-0 text-right">
+                      <span className="tnum font-medium text-white">
+                        {line.seat.id}
+                      </span>
+                      <span className="ml-2 text-[10px] uppercase tracking-[0.12em] text-white/30">
+                        {line.seat.zone}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.12em] text-[#F2D493]">
+                      No seat yet
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         </dl>
 
         <div className="mt-5 border-t border-white/[0.08] pt-5">
@@ -196,33 +229,30 @@ export function OrderSummary({ flight }: OrderSummaryProps): JSX.Element {
           <dl className="mt-4 space-y-3.5 text-sm">
             <div className="flex items-baseline justify-between gap-4">
               <dt className="text-white/55">
-                Fare
+                Seats
                 <span className="ml-2 text-[10px] text-white/25">
-                  {cabinLabel(seat?.cabin ?? search.cabin)}
+                  {lines.filter((line) => line.seat).length} of {lines.length}
                 </span>
               </dt>
+              <dd className="tnum shrink-0 text-white/85">{sgd(seatsTotal)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-white/55">
+                {fareName(fare)} fare
+                <span className="ml-2 text-[10px] text-white/25">once</span>
+              </dt>
               <dd className="tnum shrink-0 text-white/85">
-                {seat ? sgd(fareLine) : "—"}
+                {fareDelta === 0 ? "Included" : sgd(fareDelta)}
               </dd>
             </div>
             <div className="flex items-baseline justify-between gap-4">
               <dt className="text-white/55">
-                Seat selection
+                Taxes &amp; fees
                 <span className="ml-2 text-[10px] text-white/25">
-                  {seat ? seat.id : "Not selected"}
+                  {sgd(TAXES_PER_TRAVELLER)} × {travellers.length}
                 </span>
               </dt>
-              <dd className="tnum shrink-0 text-white/85">
-                {seat
-                  ? selectionFee > 0
-                    ? sgd(selectionFee)
-                    : "Included"
-                  : "—"}
-              </dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-white/55">Taxes &amp; fees</dt>
-              <dd className="tnum shrink-0 text-white/85">{sgd(62)}</dd>
+              <dd className="tnum shrink-0 text-white/85">{sgd(taxes)}</dd>
             </div>
           </dl>
 
@@ -234,13 +264,13 @@ export function OrderSummary({ flight }: OrderSummaryProps): JSX.Element {
               </p>
             </div>
             <p className="tnum text-[26px] font-semibold leading-none text-[#F2D493]">
-              {seat ? sgd(total) : "—"}
+              {allSeated ? sgd(total) : sgd(subtotal + taxes)}
             </p>
           </div>
         </div>
       </section>
 
-      {seat ? (
+      {allSeated ? (
         <section className="glass rounded-3xl p-6 sm:p-7">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold tracking-tight text-white">
@@ -333,7 +363,7 @@ export function OrderSummary({ flight }: OrderSummaryProps): JSX.Element {
                 autoComplete="cc-name"
                 value={nameOnCard}
                 onChange={(event) => setNameOnCard(event.target.value)}
-                placeholder={traveller}
+                placeholder={leadName}
                 className={inputDefault}
               />
             </div>
@@ -365,18 +395,19 @@ export function OrderSummary({ flight }: OrderSummaryProps): JSX.Element {
             <SeatIcon className="h-5 w-5" />
           </span>
           <h2 className="mt-5 text-balance text-xl font-semibold tracking-tight text-white">
-            Choose your seat first
+            Seats still needed
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[#A9BACB]">
-            Pick a window for the view, an aisle for the stretch, or the exit
-            row for extra legroom. Your total updates instantly.
+            {lines.filter((line) => !line.seat).length} of {lines.length}{" "}
+            travellers still need a seat. Pick a window for the view or the exit
+            row for the legroom — the total updates instantly.
           </p>
           <Link
             href="/seats"
             onClick={() => setPhase("overview")}
             className={`${primaryButton} mt-6 w-full`}
           >
-            Choose your seat
+            Choose the remaining seats
             <ArrowRightIcon className="h-4 w-4" />
           </Link>
           <p className="mt-3.5 text-[10px] uppercase tracking-[0.14em] text-white/30">

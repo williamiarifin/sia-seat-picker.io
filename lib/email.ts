@@ -1,4 +1,4 @@
-import type { Flight, PassengerDetails } from "./types";
+import type { Flight, Traveller } from "./types";
 
 /**
  * Transactional email is handled by EmailJS so the site can stay a static
@@ -19,7 +19,7 @@ export const emailConfigured = Boolean(SERVICE_ID && TEMPLATE_ID && PUBLIC_KEY);
 
 export interface TicketEmailInput {
   to: string;
-  passenger: PassengerDetails;
+  passenger: Traveller;
   flight: Flight;
   date: string;
   pnr: string;
@@ -28,6 +28,8 @@ export interface TicketEmailInput {
   cabin: string;
   seatZone: string;
   total: number;
+  /** "1 of 3" style label so multi-traveller emails are distinguishable. */
+  passengerLabel?: string;
 }
 
 export function isEmailAddress(value: string): boolean {
@@ -86,6 +88,7 @@ export async function sendTicketEmail(input: TicketEmailInput): Promise<void> {
         seat_zone: input.seatZone,
         boarding_group: input.boardingGroup,
         total: `SGD ${input.total.toLocaleString("en-SG")}`,
+        passenger_label: input.passengerLabel ?? "",
       },
       { publicKey: PUBLIC_KEY },
     );

@@ -17,17 +17,20 @@ type Status = "idle" | "sending" | "sent";
 
 interface EmailTicketProps {
   defaultEmail: string;
-  ticket: Omit<TicketEmailInput, "to">;
+  /** One entry per traveller; every pass goes to the same address. */
+  tickets: Omit<TicketEmailInput, "to">[];
 }
 
-export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Element {
+export function EmailTicket({ defaultEmail, tickets }: EmailTicketProps): JSX.Element {
   const [email, setEmail] = useState(defaultEmail);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const busy = status === "sending";
   const invalid = error !== null;
+  const count = tickets.length;
 
   async function handleSend(): Promise<void> {
     if (!isEmailAddress(email)) {
@@ -37,9 +40,13 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
 
     setStatus("sending");
     setError(null);
+    setProgress(0);
 
     try {
-      await sendTicketEmail({ ...ticket, to: email });
+      for (let index = 0; index < tickets.length; index += 1) {
+        await sendTicketEmail({ ...tickets[index], to: email });
+        setProgress(index + 1);
+      }
       setSentTo(email.trim());
       setStatus("sent");
     } catch (caught) {
@@ -58,7 +65,7 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
 
   return (
     <section
-      aria-label="Email this ticket"
+      aria-label="Email these tickets"
       className="glass mt-6 rounded-3xl p-5 text-left sm:p-6"
     >
       <div className="flex items-start gap-3.5">
@@ -67,14 +74,24 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
         </span>
         <div className="min-w-0">
           <h2 className="text-[15px] font-semibold tracking-tight text-white">
-            {status === "sent" ? "Ticket on its way" : "Email this ticket"}
+            {status === "sent"
+              ? count > 1
+                ? "Tickets on their way"
+                : "Ticket on its way"
+              : count > 1
+                ? `Email all ${count} tickets`
+                : "Email this ticket"}
           </h2>
           <p className="mt-1 text-[12.5px] leading-relaxed text-[#A9BACB]">
             {status === "sent" ? (
               <>
-                A copy of your boarding pass was sent to{" "}
+                {count > 1
+                  ? `${count} boarding passes were sent to `
+                  : "A copy of your boarding pass was sent to "}
                 <span className="text-[#F2D493]">{sentTo}</span>.
               </>
+            ) : count > 1 ? (
+              `Each traveller gets their own boarding pass, all delivered to one address.`
             ) : (
               "Send yourself a copy of the pass, or save it as a PDF for the airport."
             )}
@@ -97,10 +114,11 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
               onClick={() => {
                 setStatus("idle");
                 setSentTo(null);
+                setProgress(0);
               }}
               className={`${secondaryButton} h-10 px-4 text-[12.5px]`}
             >
-              Send to another
+              Send again
             </button>
             <button
               type="button"
@@ -108,7 +126,7 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
               className={`${secondaryButton} h-10 px-4 text-[12.5px]`}
             >
               <PrintIcon className="h-3.5 w-3.5" />
-              Save PDF
+              {count > 1 ? "Save all as PDF" : "Save PDF"}
             </button>
           </div>
         </div>
@@ -116,7 +134,7 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
         <>
           <div className="mt-5">
             <label htmlFor="ticket-email" className={labelBase}>
-              Send to
+              {count > 1 ? "Send all passes to" : "Send to"}
             </label>
             <input
               id="ticket-email"
@@ -158,7 +176,13 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
               disabled={busy || !emailConfigured}
               className={`${primaryButton} h-11 flex-1 px-5 text-[13px]`}
             >
-              {busy ? "Sending…" : "Send ticket"}
+              {busy
+                ? count > 1
+                  ? `Sending ${Math.min(progress + 1, count)} of ${count}…`
+                  : "Sending…"
+                : count > 1
+                  ? `Send ${count} tickets`
+                  : "Send ticket"}
               {!busy ? <MailIcon className="h-3.5 w-3.5" /> : null}
             </button>
             <button
@@ -167,7 +191,7 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
               className={`${secondaryButton} h-11 px-5 text-[13px]`}
             >
               <PrintIcon className="h-3.5 w-3.5" />
-              Save PDF
+              {count > 1 ? "Save all as PDF" : "Save PDF"}
             </button>
           </div>
 
@@ -180,7 +204,9 @@ export function EmailTicket({ defaultEmail, ticket }: EmailTicketProps): JSX.Ele
           ) : null}
 
           <p aria-live="polite" className="sr-only">
-            {status === "sending" ? "Sending your ticket" : ""}
+            {busy
+              ? `Sending ticket ${Math.min(progress + 1, count)} of ${count}`
+              : ""}
           </p>
         </>
       )}

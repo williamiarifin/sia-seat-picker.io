@@ -153,7 +153,9 @@ export function BoardingPass({
                 {seatId}
               </p>
               <p className="mt-2 text-[11px] text-white/45">
-                {cabin} · {seatZone}
+                {seatZone.toLowerCase() === cabin.toLowerCase()
+                  ? cabin
+                  : `${cabin} · ${seatZone}`}
               </p>
             </div>
 

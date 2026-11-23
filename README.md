@@ -53,10 +53,14 @@ GitHub Pages on a **private** repo requires a paid plan; on the free plan the
 repository has to be public. If you would rather keep it private, Vercel or
 Cloudflare Pages work as-is — the export is just static files.
 
-## Emailing the ticket
+## Emailing the tickets
 
-`/confirmation` can send a real copy of the boarding pass to the address entered
-on the passenger step. Because the site is a static export, this goes through
+`/confirmation` can send real boarding passes to the address entered on the
+traveller step. Every traveller gets **their own boarding pass as its own
+email**, all delivered to that one address — a three-person booking sends three
+emails, each with the right name and seat.
+
+Because the site is a static export, this goes through
 [EmailJS](https://www.emailjs.com) directly from the browser — no backend, no
 domain, no API secret.
 
@@ -103,7 +107,8 @@ It degrades gracefully: with no configuration the button is disabled and
 | `boarding_group` | 2 |
 | `gate` / `terminal` | B4 / Terminal 2 |
 | `aircraft` / `registration` | Boeing 737-800 / 9V-MBA |
-| `total` | SGD 402 |
+| `total` | SGD 996 |
+| `passenger_label` | Passenger 1 of 3 |
 
 Template body:
 

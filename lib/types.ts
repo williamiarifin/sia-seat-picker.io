@@ -79,9 +79,13 @@ export interface Flight {
   seatsLeft: number;
 }
 
-export interface PassengerDetails {
+export interface Traveller {
   firstName: string;
   lastName: string;
+}
+
+/** Contact details live on the booking, not on each traveller. */
+export interface ContactDetails {
   email: string;
   phone: string;
 }
